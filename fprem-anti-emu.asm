@@ -43,7 +43,7 @@ _start:
     ffree   st0
     fincstp
 
-    ; Checking the C2 flag
+    ; Checking if bit 10 of C2 is set
     test    ax, 0400h 
     jnz     .real_like
 

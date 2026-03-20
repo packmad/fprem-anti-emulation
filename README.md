@@ -34,7 +34,7 @@ This technique exploits three key properties of the x87 FPU:
 
 ### 🧩 Step-by-step breakdown
 
-The full code is [here](./fprem-anti-emu.asm)
+The full assembly code is [here](./fprem-anti-emu.asm)
 
 #### 1. Crafting 80-bit floating-point values manually
 
@@ -90,7 +90,8 @@ result in one step.
 #### 5. Checking the C2 flag
 
     fnstsw ax
-    test ax, 0x0400
+    test ax, 0x0400 ; Checking if bit 10 of C2 is set
+
 
 -   C2 = 1 → partial reduction
 -   C2 = 0 → final result
@@ -107,20 +108,44 @@ Produce C2 = 0
 
 ------------------------------------------------------------------------
 
-## 🔬 Reproducibility
+## 🔬 Reproducibility 
 
-### Native
+The code prints 0 on real hardware while prints 1 in Unicorn emulator
 
-    nasm -felf64 fprem-anti-emu.asm -o fprem.o
-    ld fprem.o -o fprem
-    ./fprem ; echo $?
+```asm
+    ; Checking if bit 10 of C2 is set
+    test    ax, 0400h 
+    jnz     .real_like
 
-------------------------------------------------------------------------
+.emu_like:
+    mov     eax, 60
+    mov     edi, 1
+    syscall
 
-### Unicorn
+.real_like:
+    mov     eax, 60
+    xor     edi, edi
+    syscall
+```
 
-    pip install unicorn pyelftools
-    python3 unicorn_emulate.py ./fprem
+### Native (real hardware) 
+Dependencies: `sudo apt install nasm build-essential`
 
-------------------------------------------------------------------------
+```
+nasm -felf64 fprem-anti-emu.asm -o fprem-anti-emu.o && ld fprem-anti-emu.o -o fprem-anti-emu.exe && ./fprem-anti-emu.exe; echo $?
+0 
+```
 
+### Emulation (Unicorn) 
+
+Dependencies: `pip install unicorn pyelftools`
+
+```
+python3 unicorn_emulate.py ./fprem-anti-emu.exe
+[+] entry point: 0x401000
+[sys_exit] status=1
+[+] clean emulated exit status = 1
+=> took the simplified_emulation path
+```
+
+---
